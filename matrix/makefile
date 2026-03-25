@@ -6,6 +6,8 @@ TARGET = $(SRC:.cpp=)
 
 all: $(TARGET)
 
+lab: CFLAGS = -O2 -Wall
+
 %: %.cpp
 	$(CC) $(CFLAGS) $< -o $@
 
