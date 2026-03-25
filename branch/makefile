@@ -6,6 +6,9 @@ TARGET = $(SRC:.cpp=)
 
 all: $(TARGET)
 
+fall_through: CFLAGS = -O2 -Wall 
+unroll: CFLAGS = -O1 -Wall 
+
 %: %.cpp
 	$(CC) $(CFLAGS) $< -o $@
 
