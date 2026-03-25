@@ -47,6 +47,7 @@ int main(int argc, char* argv[]) {
     real_t max_err = 0;
     size_t printed = 0;
 
+    std::cout << "Comparing " << out_file << " with expected results...\n";
     std::cout << std::fixed << std::setprecision(6);
     for (size_t i = 0; i < count; ++i) {
         real_t err = std::fabs(out[i] - ans[i]);
@@ -65,6 +66,6 @@ int main(int argc, char* argv[]) {
     if (diff_cnt > 10) std::cout << "... (" << diff_cnt - printed << " more differences)\n";
 
     std::cout << "Total differences: " << diff_cnt << "\n";
-    std::cout << "Max error: " << max_err << "\n";
+    std::cout << "Max error: " << max_err << "\n\n";
     return 0;
 }

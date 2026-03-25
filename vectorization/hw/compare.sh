@@ -23,9 +23,10 @@ echo "Running matrix multiplication..."
 ./main $M $K $N
 
 echo "--------------------"
-# 3) Compare c.bin vs ans.bin
-echo "Comparing output with expected results..."
-./float-diff ans.bin c.bin
+# 3) Compare with ans.bin
+./float-diff blocked.bin ans.bin
+./float-diff avx_blocked.bin ans.bin
+./float-diff opt.bin ans.bin
 
 echo "--------------------"
 # Done

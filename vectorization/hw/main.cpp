@@ -22,6 +22,16 @@ void write_matrix(const std::string &filename, const real_t *data, size_t count,
     ofs.write(reinterpret_cast<const char*>(data), count * sizeof(real_t));
 }
 
+inline void matmul(real_t *A, real_t *B, real_t *C, int M, int K, int N) {
+
+    for (int i = 0; i < M; ++i) {
+        for (int j = 0; j < N; ++j) {
+            for (int k = 0; k < K; ++k) {
+                C[i * N + j] += A[i * K + k] * B[k * N + j];
+            }
+        }
+    }
+}
 
 inline void matmul_avx2(real_t *A, real_t *B, real_t *C, int M, int K, int N) {
     
@@ -41,49 +51,26 @@ inline void matmul_avx2(real_t *A, real_t *B, real_t *C, int M, int K, int N) {
                 C[i * N + j] += A[i * K + k] * B[k * N + j];
             }
         }
-    }
+    }   
 }
-/*
-void matrix_mult_avx2_optimized(real_t *A, real_t *B, real_t*C, int M, int K, int N) {
 
-// Define block sizes
-    constexpr int BI = __;    // TODO: set block size for I dimension
-    constexpr int BJ = __;    // TODO: set block size for J dimension
-    constexpr int BK = __;    // TODO: set block size for K dimension
-    constexpr int VLEN = __;  // TODO: set AVX2 vector length
+inline void matmul_blocked(real_t *A, real_t *B, real_t *C, int M, int K, int N) {
+    // [TODO]: implement blocked matrix multiplication
 
-    // TODO: loop over blocks of A and B
-    for (int ii = 0; ii < M; ii += BI) {
-        int i_end = std::min(ii + BI, M);
-        for (int jj = 0; jj < N; jj += BJ) {
-            int j_end = std::min(jj + BJ, N);
-            for (int kk = 0; kk < K; kk += BK) {
-                int k_end = std::min(kk + BK, K);
+}
 
-                // TODO: compute block C[ii:i_end, jj:j_end]
-                for (int i = ii; i < i_end; ++i) {
-                    for (int k = kk; k < k_end; ++k) {
-                        // TODO: broadcast A[i * K + k] into __m256 a_vec
+inline void matmul_avx2_blocked(real_t *A, real_t *B, real_t *C, int M, int K, int N) {
+    // [TODO]: implement blocked matrix multiplication with vectorization
 
-                        int j = jj;
-                        // TODO: vectorized inner loop over j
-                        for (; j + VLEN - 1 < j_end; j += VLEN) {
-                            // TODO: load C[i * N + j] into __m256 c_vec
-                            // TODO: load B[k * N + j] into __m256 b_vec
-                            // TODO: perform c_vec = a_vec * b_vec + c_vec
-                            // TODO: store c_vec back to C[i * N + j]
-                        }
+}
 
-                        // TODO: scalar remainder loop over j to handle leftover elements
-                        for (; j < j_end; ++j) {
-                            // TODO: accumulate A[i * K + k] * B[k * N + j] into C[i * N + j]
-                        }
-                    }
-                }
-            }
-        }
-    }
-}*/
+inline void matmul_optimized(real_t *A, real_t *B, real_t *C, int M, int K, int N) {
+    // [TODO] (optional): implement other optimization 
+    
+}
+
+
+
 
 int main(int argc, char *argv[]) {
     if (argc != 4) {
@@ -95,13 +82,20 @@ int main(int argc, char *argv[]) {
     int K = std::stoi(argv[2]);
     int N = std::stoi(argv[3]);
 
-    // Aligned allocations for better vectorization
-    //int N_aligned = align_to_8(N);
     real_t *A = (real_t *)(_mm_malloc(M * K * sizeof(real_t), 32));
     real_t *B = (real_t *)(_mm_malloc(K * N * sizeof(real_t), 32));
     real_t *C = (real_t *)(_mm_malloc(M * N * sizeof(real_t), 32));
 
-    memset(C, 0, M * N * sizeof(real_t));
+    auto run_test = [&](std::string name, auto func) {
+        memset(C, 0, M * N * sizeof(real_t));
+        auto start = std::chrono::high_resolution_clock::now();
+        func(A, B, C, M, K, N);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        std::cout << "[" << name << "]: " << duration.count() << "ms\n";
+        write_matrix(name + ".bin", C,  static_cast<size_t>(M) * N, false);
+    };
+
 
     if (!A || !B || !C) {
         std::cerr << "Aligned allocation failed" << std::endl;
@@ -118,20 +112,12 @@ int main(int argc, char *argv[]) {
     ifs.read(reinterpret_cast<char*>(B), static_cast<size_t>(K) * N * sizeof(real_t));
     ifs.close();  // Close the file after reading
 
-    // Matrix multiplication
-    auto start = std::chrono::high_resolution_clock::now();
-
-    //matmul_avx2(A, B, C, M, K, N);
-
-    // [TODO]
-    matrix_mult_avx2_optimized(A, B, C, M, K, N);
-    
-    auto end = std::chrono::high_resolution_clock::now();
-
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "Execution time: " << elapsed.count() << " s\n";
-
-    write_matrix("c.bin", C, static_cast<size_t>(M) * N, false);
+    // Matrix multiplication    
+    run_test("naive", matmul);
+    run_test("avx", matmul_avx2);
+    run_test("blocked", matmul_blocked);
+    run_test("avx_blocked", matmul_avx2_blocked);
+    // run_test("opt", matmul_optimized);
 
     // Free allocated memory
     _mm_free(A);
